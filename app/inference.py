@@ -93,8 +93,8 @@ def ocr_words_and_boxes(pil_image: Image.Image) -> tuple[list[str], list[list[in
 
 
 def extract_key_value_pairs(results: list[WordPrediction]) -> list[dict]:
-    """Groups consecutive QUESTION/ANSWER words and pairs them spatially."""
-    questions, answers = [], []
+    """Groups consecutive QUESTION/ANSWER/HEADER words and pairs them spatially."""
+    questions, answers, headers = [], [], []
     current_chunk = []
     current_entity = None
     
@@ -103,7 +103,7 @@ def extract_key_value_pairs(results: list[WordPrediction]) -> list[dict]:
     
     # Group contiguous tokens with spatial boundaries
     for r in results:
-        if r["entity"] in ["QUESTION", "ANSWER"]:
+        if r["entity"] in ["QUESTION", "ANSWER", "HEADER"]:
             if r["entity"] == current_entity:
                 prev_box = current_chunk[-1]["box"]
                 curr_box = r["box"]
@@ -113,23 +113,31 @@ def extract_key_value_pairs(results: list[WordPrediction]) -> list[dict]:
                 
                 # If word is on a new line or there's a large horizontal gap, break the chunk
                 if y_dist > MAX_VERTICAL_GAP or x_gap > MAX_HORIZONTAL_GAP:
-                    (questions if current_entity == "QUESTION" else answers).append(current_chunk)
+                    if current_entity == "QUESTION": questions.append(current_chunk)
+                    elif current_entity == "ANSWER": answers.append(current_chunk)
+                    elif current_entity == "HEADER": headers.append(current_chunk)
                     current_chunk = [r]
                 else:
                     current_chunk.append(r)
             else:
                 if current_chunk:
-                    (questions if current_entity == "QUESTION" else answers).append(current_chunk)
+                    if current_entity == "QUESTION": questions.append(current_chunk)
+                    elif current_entity == "ANSWER": answers.append(current_chunk)
+                    elif current_entity == "HEADER": headers.append(current_chunk)
                 current_chunk = [r]
                 current_entity = r["entity"]
         else:
             if current_chunk:
-                (questions if current_entity == "QUESTION" else answers).append(current_chunk)
+                if current_entity == "QUESTION": questions.append(current_chunk)
+                elif current_entity == "ANSWER": answers.append(current_chunk)
+                elif current_entity == "HEADER": headers.append(current_chunk)
                 current_chunk = []
                 current_entity = None
                 
     if current_chunk:
-        (questions if current_entity == "QUESTION" else answers).append(current_chunk)
+        if current_entity == "QUESTION": questions.append(current_chunk)
+        elif current_entity == "ANSWER": answers.append(current_chunk)
+        elif current_entity == "HEADER": headers.append(current_chunk)
 
     pairs = []
     def get_chunk_info(chunk):
@@ -190,6 +198,15 @@ def extract_key_value_pairs(results: list[WordPrediction]) -> list[dict]:
                 "answer": a_text,
                 "confidence": round(a_conf, 4)
             })
+            
+    # Include Headers in the output so no data is lost
+    for h_chunk in headers:
+        h_text, h_box, h_conf = get_chunk_info(h_chunk)
+        pairs.append({
+            "question": "Header",
+            "answer": h_text,
+            "confidence": round(h_conf, 4)
+        })
             
     return pairs
 
