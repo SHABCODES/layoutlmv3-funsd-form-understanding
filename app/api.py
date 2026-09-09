@@ -77,3 +77,6 @@ async def predict_endpoint(file: UploadFile = File(...)) -> JSONResponse:
             "words": results,
         }
     )
+
+from fastapi.staticfiles import StaticFiles
+app.mount("/", StaticFiles(directory="web", html=True), name="web")
