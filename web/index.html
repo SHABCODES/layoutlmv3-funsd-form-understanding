@@ -1,31 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>LayoutLMv3 Form Understanding — Demo</title>
-<link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LayoutLMv3 Form Understanding</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
-    <h1>Form Understanding Demo</h1>
-    <p>Upload a scanned form. The model (LayoutLMv3, fine-tuned on FUNSD) labels every word as
-      <span class="tag header">HEADER</span>, <span class="tag question">QUESTION</span>,
-      <span class="tag answer">ANSWER</span>, or ignores it. Runs against the FastAPI service in
-      <code>app/api.py</code> — see the README for how to start it.</p>
-  </header>
+  <div class="background-glow"></div>
 
-  <main>
-    <section class="controls">
-      <input type="file" id="fileInput" accept="image/*" />
-      <button id="predictBtn" disabled>Run prediction</button>
-      <span id="status"></span>
-    </section>
+  <div class="container">
+    <header class="glass-panel">
+      <div class="header-content">
+        <h1>LayoutLMv3 <span>Form Intelligence</span></h1>
+        <p>State-of-the-art document layout analysis. Upload a scanned form and our fine-tuned model will extract and categorize every word.</p>
+        
+        <div class="legend">
+          <span class="tag header"><span class="dot"></span>HEADER</span>
+          <span class="tag question"><span class="dot"></span>QUESTION</span>
+          <span class="tag answer"><span class="dot"></span>ANSWER</span>
+        </div>
+      </div>
+    </header>
 
-    <section class="canvas-wrap">
-      <canvas id="canvas"></canvas>
-    </section>
-  </main>
+    <main>
+      <section class="upload-section glass-panel">
+        <div class="drop-zone" id="dropZone">
+          <input type="file" id="fileInput" accept="image/*" hidden />
+          <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          </svg>
+          <p class="drop-text">Drag & drop a scanned form here</p>
+          <p class="drop-subtext">or click to browse files</p>
+        </div>
+
+        <div class="action-bar">
+          <div class="status-indicator" id="status">
+            <span class="status-text">Awaiting input...</span>
+          </div>
+          <button id="predictBtn" disabled>
+            <span class="btn-text">Run Analysis</span>
+            <svg class="loader hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </button>
+        </div>
+      </section>
+
+      <section class="canvas-wrap glass-panel hidden" id="canvasContainer">
+        <canvas id="canvas"></canvas>
+      </section>
+    </main>
+  </div>
 
   <script src="app.js"></script>
 </body>
