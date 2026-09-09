@@ -23,6 +23,8 @@ import torch
 from PIL import Image
 from transformers import LayoutLMv3ForTokenClassification, LayoutLMv3Processor
 
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
 MODEL_DIR = os.environ.get("MODEL_DIR", "./model")
 
 LABEL_LIST = [
@@ -103,7 +105,7 @@ def predict(pil_image: Image.Image) -> list[WordPrediction]:
     if not words:
         return []
 
-    encoding = processor(pil_image, words, boxes=boxes, return_tensors="pt", truncation=True)
+    encoding = processor(pil_image, words, boxes=boxes, return_tensors="pt", truncation=True, padding="max_length", max_length=512, is_split_into_words=True)
     word_ids = encoding.word_ids(batch_index=0)
     inputs = {k: v for k, v in encoding.items() if k != "word_ids"}
 
