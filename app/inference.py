@@ -98,11 +98,25 @@ def extract_key_value_pairs(results: list[WordPrediction]) -> list[dict]:
     current_chunk = []
     current_entity = None
     
-    # Group contiguous tokens
+    MAX_HORIZONTAL_GAP = 50   # 5% of page width (0-1000 scale)
+    MAX_VERTICAL_GAP = 20     # 2% of page height (roughly a new line)
+    
+    # Group contiguous tokens with spatial boundaries
     for r in results:
         if r["entity"] in ["QUESTION", "ANSWER"]:
             if r["entity"] == current_entity:
-                current_chunk.append(r)
+                prev_box = current_chunk[-1]["box"]
+                curr_box = r["box"]
+                
+                y_dist = abs(curr_box[1] - prev_box[1])
+                x_gap = curr_box[0] - prev_box[2]
+                
+                # If word is on a new line or there's a large horizontal gap, break the chunk
+                if y_dist > MAX_VERTICAL_GAP or x_gap > MAX_HORIZONTAL_GAP:
+                    (questions if current_entity == "QUESTION" else answers).append(current_chunk)
+                    current_chunk = [r]
+                else:
+                    current_chunk.append(r)
             else:
                 if current_chunk:
                     (questions if current_entity == "QUESTION" else answers).append(current_chunk)
