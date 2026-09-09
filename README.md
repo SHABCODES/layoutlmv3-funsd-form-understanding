@@ -27,8 +27,13 @@ up once you try to actually use a model rather than just report its metrics:
 - **Added OCR-based inference** so the model works on documents that don't come with pre-annotated
   words/boxes (i.e. anything that isn't the FUNSD test set) — the actual condition any real input
   arrives in.
-- **Productionized the model** behind a FastAPI service (`app/api.py`) with a reusable inference
-  module (`app/inference.py`), plus a zero-build-step web client (`web/`) to demo it end to end.
+- **Productionized the model** behind a FastAPI service (`app/api.py`) with a reusable inference module (`app/inference.py`), plus a zero-build-step web client (`web/`) to demo it end to end.
+
+### 3. Human-in-the-Loop Verification UI (New!)
+A professional, glassmorphic web interface is mounted at the root (`http://localhost:8000/`) to allow users to interact with the model:
+- **Visual Bounding Boxes:** Displays the predicted layout (Blue=Header, Red=Question, Green=Answer).
+- **Spatial Chunking:** The backend utilizes geometric distance thresholds to intelligently merge fragmented OCR text into clean, distinct form fields, preventing massive walls of text when the model hallucinates on complex layouts.
+- **Editable Verification Panel:** Users can manually verify the model's confidence scores, correct labels, and export the structured data into a perfect, validated JSON file.
 
 ---
 
@@ -121,24 +126,12 @@ docker run -p 8888:8888 layoutlmv3-funsd-notebook
 Once `model/` exists (from step 1), start the API:
 ```bash
 pip install -r requirements.txt   # includes fastapi + uvicorn
-uvicorn app.api:app --reload --port 8000
+uvicorn app.api:app --port 8000
 ```
 
-Or via Docker:
-```bash
-docker build -f Dockerfile.serve -t layoutlmv3-funsd-api .
-docker run -p 8000:8000 -v $(pwd)/model:/app/model layoutlmv3-funsd-api
-```
+### 3. Use the Interactive Interface
 
-Test it directly:
-```bash
-curl -F "file=@your_form.png" http://localhost:8000/predict
-```
-
-### 3. Try the demo client
-
-Open `web/index.html` in a browser (no build step, no npm install). Upload an image, hit
-"Run prediction" — it calls the API above and draws color-coded boxes over the words.
+Open your browser to `http://localhost:8000/`. Upload any scanned form image to visually inspect the AI's layout predictions, verify the data in the side-panel, and click "Download JSON" to export the structured key-value pairs!
 
 ---
 
