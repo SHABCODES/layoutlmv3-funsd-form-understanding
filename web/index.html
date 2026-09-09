@@ -51,9 +51,25 @@
         </div>
       </section>
 
-      <section class="canvas-wrap glass-panel hidden" id="canvasContainer">
-        <canvas id="canvas"></canvas>
-      </section>
+      <div class="results-container hidden" id="resultsContainer">
+        <section class="canvas-wrap glass-panel" id="canvasContainer">
+          <canvas id="canvas"></canvas>
+        </section>
+
+        <aside class="verification-panel glass-panel">
+          <div class="panel-header">
+            <h2>Verification Panel</h2>
+            <p>Review and edit extracted data before exporting.</p>
+          </div>
+          <div id="kvPairsContainer" class="kv-pairs-list"></div>
+          <button id="exportBtn" class="export-btn">
+            <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download JSON
+          </button>
+        </aside>
+      </div>
     </main>
   </div>
 

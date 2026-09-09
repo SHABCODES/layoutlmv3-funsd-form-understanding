@@ -4,9 +4,12 @@ const dropZone = document.getElementById("dropZone");
 const fileInput = document.getElementById("fileInput");
 const predictBtn = document.getElementById("predictBtn");
 const statusEl = document.querySelector(".status-text");
+const resultsContainer = document.getElementById("resultsContainer");
 const canvasContainer = document.getElementById("canvasContainer");
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+const kvPairsContainer = document.getElementById("kvPairsContainer");
+const exportBtn = document.getElementById("exportBtn");
 
 const btnText = document.querySelector(".btn-text");
 const loader = document.querySelector(".loader");
@@ -76,8 +79,9 @@ function handleFile(file) {
     predictBtn.disabled = false;
     statusEl.textContent = `Loaded ${file.name} (${img.width} \u00d7 ${img.height})`;
     
-    // Show canvas
-    canvasContainer.classList.remove("hidden");
+    // Show results container
+    resultsContainer.classList.remove("hidden");
+    kvPairsContainer.innerHTML = ""; // Clear old results
   };
   img.src = URL.createObjectURL(file);
 }
@@ -104,6 +108,7 @@ predictBtn.addEventListener("click", async () => {
     
     const data = await res.json();
     drawPredictions(data);
+    renderVerificationPanel(data);
     statusEl.textContent = `Success \u2014 mapped ${data.words.length} tokens.`;
   } catch (e) {
     statusEl.textContent = `Error: ${e.message}`;
@@ -139,3 +144,49 @@ function drawPredictions(data) {
     ctx.strokeRect(x0 * scaleX, y0 * scaleY, (x1 - x0) * scaleX, (y1 - y0) * scaleY);
   }
 }
+
+function renderVerificationPanel(data) {
+  kvPairsContainer.innerHTML = "";
+  
+  if (!data.structured_data || data.structured_data.length === 0) {
+    kvPairsContainer.innerHTML = "<p>No structured key-value pairs detected.</p>";
+    return;
+  }
+  
+  data.structured_data.forEach((pair, index) => {
+    const confClass = pair.confidence > 0.8 ? "high" : "low";
+    const confPercent = Math.round(pair.confidence * 100);
+    
+    const pairHtml = `
+      <div class="kv-pair" data-index="${index}">
+        <label>
+          Pair #${index + 1}
+          <span class="conf ${confClass}">${confPercent}% Conf</span>
+        </label>
+        <input type="text" class="question-input" value="${pair.question}" placeholder="Question / Key">
+        <input type="text" class="answer-input" value="${pair.answer}" placeholder="Answer / Value">
+      </div>
+    `;
+    kvPairsContainer.insertAdjacentHTML("beforeend", pairHtml);
+  });
+}
+
+exportBtn.addEventListener("click", () => {
+  const pairs = [];
+  const pairEls = document.querySelectorAll(".kv-pair");
+  
+  pairEls.forEach((el) => {
+    const question = el.querySelector(".question-input").value;
+    const answer = el.querySelector(".answer-input").value;
+    pairs.push({ question, answer });
+  });
+  
+  const blob = new Blob([JSON.stringify(pairs, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "verified_results.json";
+  a.click();
+  URL.revokeObjectURL(url);
+});

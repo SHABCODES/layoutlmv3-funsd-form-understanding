@@ -65,7 +65,7 @@ async def predict_endpoint(file: UploadFile = File(...)) -> JSONResponse:
         raise HTTPException(status_code=400, detail=f"Could not read image: {exc}") from exc
 
     try:
-        results = predict(image)
+        results, structured_data = predict(image)
     except RuntimeError as exc:
         # Most likely cause: MODEL_DIR isn't populated yet (see app/inference.py).
         raise HTTPException(status_code=503, detail=str(exc)) from exc
@@ -75,6 +75,7 @@ async def predict_endpoint(file: UploadFile = File(...)) -> JSONResponse:
             "image_width": image.width,
             "image_height": image.height,
             "words": results,
+            "structured_data": structured_data,
         }
     )
 

@@ -48,6 +48,7 @@ class WordPrediction(TypedDict):
     label: str               # e.g. "B-ANSWER"
     entity: str               # e.g. "ANSWER" (BIO prefix stripped, "O" if none)
     color: str
+    confidence: float
 
 
 @lru_cache(maxsize=1)
@@ -91,19 +92,95 @@ def ocr_words_and_boxes(pil_image: Image.Image) -> tuple[list[str], list[list[in
     return words, boxes
 
 
-def predict(pil_image: Image.Image) -> list[WordPrediction]:
+def extract_key_value_pairs(results: list[WordPrediction]) -> list[dict]:
+    """Groups consecutive QUESTION/ANSWER words and pairs them spatially."""
+    questions, answers = [], []
+    current_chunk = []
+    current_entity = None
+    
+    # Group contiguous tokens
+    for r in results:
+        if r["entity"] in ["QUESTION", "ANSWER"]:
+            if r["entity"] == current_entity:
+                current_chunk.append(r)
+            else:
+                if current_chunk:
+                    (questions if current_entity == "QUESTION" else answers).append(current_chunk)
+                current_chunk = [r]
+                current_entity = r["entity"]
+        else:
+            if current_chunk:
+                (questions if current_entity == "QUESTION" else answers).append(current_chunk)
+                current_chunk = []
+                current_entity = None
+                
+    if current_chunk:
+        (questions if current_entity == "QUESTION" else answers).append(current_chunk)
+
+    pairs = []
+    def get_chunk_info(chunk):
+        text = " ".join([c["word"] for c in chunk])
+        x0 = min([c["box"][0] for c in chunk])
+        y0 = min([c["box"][1] for c in chunk])
+        x1 = max([c["box"][2] for c in chunk])
+        y1 = max([c["box"][3] for c in chunk])
+        conf = sum([c["confidence"] for c in chunk]) / len(chunk)
+        return text, (x0, y0, x1, y1), conf
+
+    used_answers = set()
+
+    for q_chunk in questions:
+        q_text, q_box, q_conf = get_chunk_info(q_chunk)
+        best_dist = float('inf')
+        best_a = None
+        best_a_idx = -1
+        
+        for i, a_chunk in enumerate(answers):
+            if i in used_answers:
+                continue
+                
+            a_text, a_box, a_conf = get_chunk_info(a_chunk)
+            q_cx = (q_box[0] + q_box[2]) / 2
+            q_cy = (q_box[1] + q_box[3]) / 2
+            a_cx = (a_box[0] + a_box[2]) / 2
+            a_cy = (a_box[1] + a_box[3]) / 2
+            
+            # Heuristic: Answer should generally be to the right or directly below
+            if a_cx > q_cx - 100 and a_cy > q_cy - 50:
+                dist = ((a_cx - q_cx)**2 + (a_cy - q_cy)**2) ** 0.5
+                if dist < best_dist:
+                    best_dist = dist
+                    best_a = (a_text, a_conf)
+                    best_a_idx = i
+                    
+        if best_a:
+            used_answers.add(best_a_idx)
+            pairs.append({
+                "question": q_text,
+                "answer": best_a[0],
+                "confidence": round((q_conf + best_a[1]) / 2, 4)
+            })
+        else:
+            pairs.append({
+                "question": q_text,
+                "answer": "",
+                "confidence": round(q_conf, 4)
+            })
+            
+    return pairs
+
+
+def predict(pil_image: Image.Image) -> tuple[list[WordPrediction], list[dict]]:
     """
     Run OCR + LayoutLMv3 on an arbitrary document image and return one entry
-    per detected word, correctly aligned via `word_ids()` (each word's label
-    is taken from its first subword token — see notebook Section 13 for why
-    this matters and what breaks if you skip it).
+    per detected word, along with paired key-value structured data.
     """
     model, processor = load_model()
     pil_image = pil_image.convert("RGB")
 
     words, boxes = ocr_words_and_boxes(pil_image)
     if not words:
-        return []
+        return [], []
 
     encoding = processor(pil_image, words, boxes=boxes, return_tensors="pt", truncation=True, padding="max_length", max_length=512, is_split_into_words=True)
     word_ids = encoding.word_ids(batch_index=0)
@@ -111,12 +188,19 @@ def predict(pil_image: Image.Image) -> list[WordPrediction]:
 
     with torch.no_grad():
         logits = model(**inputs).logits
-    pred_ids = logits.argmax(-1).squeeze().tolist()
+        
+    probs = torch.softmax(logits, dim=-1)
+    confidences, pred_ids = probs.max(dim=-1)
+    
+    pred_ids = pred_ids.squeeze().tolist()
+    confidences = confidences.squeeze().tolist()
 
     word_to_pred: dict[int, int] = {}
+    word_to_conf: dict[int, float] = {}
     for token_idx, word_idx in enumerate(word_ids):
         if word_idx is not None and word_idx not in word_to_pred:
             word_to_pred[word_idx] = pred_ids[token_idx]
+            word_to_conf[word_idx] = confidences[token_idx]
 
     results: list[WordPrediction] = []
     for i, (word, box) in enumerate(zip(words, boxes)):
@@ -129,6 +213,10 @@ def predict(pil_image: Image.Image) -> list[WordPrediction]:
                 label=label,
                 entity=entity,
                 color=ENTITY_COLORS.get(entity, "#6b7280"),
+                confidence=round(word_to_conf.get(i, 0.0), 4)
             )
         )
-    return results
+        
+    structured_data = extract_key_value_pairs(results)
+    
+    return results, structured_data
