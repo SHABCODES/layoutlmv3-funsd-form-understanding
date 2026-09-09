@@ -167,6 +167,16 @@ def extract_key_value_pairs(results: list[WordPrediction]) -> list[dict]:
                 "confidence": round(q_conf, 4)
             })
             
+    # Fallback: if the model only detected ANSWERS and no QUESTIONS, list the un-paired answers
+    for i, a_chunk in enumerate(answers):
+        if i not in used_answers:
+            a_text, a_box, a_conf = get_chunk_info(a_chunk)
+            pairs.append({
+                "question": "Un-paired Answer",
+                "answer": a_text,
+                "confidence": round(a_conf, 4)
+            })
+            
     return pairs
 
 
