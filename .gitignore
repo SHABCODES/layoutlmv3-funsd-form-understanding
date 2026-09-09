@@ -1,0 +1,18 @@
+# Trained model checkpoints (large, regenerate via notebook.ipynb Section 12)
+model/
+layoutlmv3-funsd/
+*.pt
+*.bin
+*.safetensors
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# OS
+.DS_Store

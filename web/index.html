@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LayoutLMv3 Form Understanding — Demo</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Form Understanding Demo</h1>
+    <p>Upload a scanned form. The model (LayoutLMv3, fine-tuned on FUNSD) labels every word as
+      <span class="tag header">HEADER</span>, <span class="tag question">QUESTION</span>,
+      <span class="tag answer">ANSWER</span>, or ignores it. Runs against the FastAPI service in
+      <code>app/api.py</code> — see the README for how to start it.</p>
+  </header>
+
+  <main>
+    <section class="controls">
+      <input type="file" id="fileInput" accept="image/*" />
+      <button id="predictBtn" disabled>Run prediction</button>
+      <span id="status"></span>
+    </section>
+
+    <section class="canvas-wrap">
+      <canvas id="canvas"></canvas>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

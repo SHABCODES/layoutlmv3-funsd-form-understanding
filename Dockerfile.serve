@@ -1,0 +1,22 @@
+# Lightweight image for serving predictions via FastAPI.
+# Assumes a trained model has already been exported to ./model
+# (see notebook.ipynb Section 12, or mount a volume at /app/model).
+FROM python:3.10-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    tesseract-ocr \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app/ app/
+COPY web/ web/
+# COPY model/ model/   # uncomment once you've exported a trained checkpoint
+
+ENV MODEL_DIR=/app/model
+EXPOSE 8000
+
+CMD ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000"]

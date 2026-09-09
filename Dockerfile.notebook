@@ -1,0 +1,21 @@
+# Training / experimentation image — runs the Jupyter notebook.
+# For the lightweight API-serving image, see Dockerfile.serve.
+FROM python:3.10-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    git \
+    tesseract-ocr \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY notebook.ipynb .
+COPY predictions_visualized.png .
+
+EXPOSE 8888
+
+CMD ["jupyter", "notebook", "--ip=0.0.0.0", "--port=8888", \
+     "--no-browser", "--allow-root", "--NotebookApp.token=''"]
